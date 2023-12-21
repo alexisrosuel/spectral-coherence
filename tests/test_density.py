@@ -33,7 +33,7 @@ def test__is_B_valid(B, n_samples, is_valid):
         (1, 2, [0]),
         (2, 1, [0]),
         (10, 3, [0, 4, 9]),
-    ]
+    ],
 )
 def test__select_indices(n, target_count, expected_indices):
     indices = _select_indices(n, target_count)
@@ -85,53 +85,95 @@ def test__smooth(x, B, expected_smoothed_x):
 
 
 @pytest.mark.parametrize(
-    "x, expected_periodogram, expected_freqs",
+    "x, n_max_freqs, B, expected_periodogram, expected_freqs, expected_mask_estimated_freqs",
     [
         # only 1 feature
         (
             [[1], [2], [3], [4], [5]],
+            None,
+            None,
             [
+                [[1.38196601 + 0.0j]],
+                [[3.61803399 + 0.0j]],
                 [[45.0 + 0.0j]],
                 [[3.61803399 + 0.0j]],
                 [[1.38196601 + 0.0j]],
-                [[1.38196601 + 0.0j]],
-                [[3.61803399 + 0.0j]],
             ],
-            [0.0, 0.2, 0.4, -0.4, -0.2],
+            [-0.4, -0.2, 0.0, 0.2, 0.4],
+            [True, True, True, True, True],
         ),
         # 2 features
         (
             [[1, 2], [2, 3], [3, 4]],
+            None,
+            None,
             [
+                [[1.0 + 0.0j, 1.0 + 0.0j], [1.0 + 0.0j, 1.0 + 0.0j]],
                 [[12.0 + 0.0j, 18.0 + 0.0j], [18.0 + 0.0j, 27.0 + 0.0j]],
                 [[1.0 + 0.0j, 1.0 + 0.0j], [1.0 + 0.0j, 1.0 + 0.0j]],
-                [[1.0 + 0.0j, 1.0 + 0.0j], [1.0 + 0.0j, 1.0 + 0.0j]],
             ],
-            [0.0, 0.33333333, -0.33333333],
+            [-0.33333333, 0.0, 0.33333333],
+            [True, True, True],
         ),
         # complex case
         (
             [[1 + 1j], [2 + 2j], [3 + 3j], [4 + 5j], [5 + 5j]],
+            None,
+            None,
             [
+                [[3.19654884 + 0.0j]],
+                [[9.57983308 + 0.0j]],
                 [[96.2 + 0.0j]],
                 [[8.52837085 + 0.0j]],
                 [[1.49524723 + 0.0j]],
-                [[3.19654884 + 0.0j]],
-                [[9.57983308 + 0.0j]],
             ],
-            [0.0, 0.2, 0.4, -0.4, -0.2],
+            [-0.4, -0.2, 0.0, 0.2, 0.4],
+            [True, True, True, True, True],
+        ),
+        # case with only some frequencies estimated, and B=1 so no edge frequencies to include
+        (
+            [[1], [2], [3], [4], [5]],
+            3,
+            1,
+            [[[1.38196601 + 0.0j]], [[45.0 + 0.0j]], [[1.38196601 + 0.0j]]],
+            [-0.4, 0.0, 0.4],
+            [True, True, True],
+        ),
+        # case with only some frequencies estimated, and B=3 so edge frequencies to include
+        (
+            [[1], [2], [3], [4], [5]],
+            3,
+            3,
+            [
+                [[1.38196601 + 0.0j]],
+                [[3.61803399 + 0.0j]],
+                [[45.0 + 0.0j]],
+                [[3.61803399 + 0.0j]],
+                [[1.38196601 + 0.0j]],
+            ],
+            [-0.4, -0.2, 0.0, 0.2, 0.4],
+            [True, False, True, False, True],
         ),
     ],
 )
-def test__periodogram(x, expected_periodogram, expected_freqs):
-    x, expected_periodogram, expected_freqs = (
+def test__periodogram(
+    x,
+    n_max_freqs,
+    B,
+    expected_periodogram,
+    expected_freqs,
+    expected_mask_estimated_freqs,
+):
+    x, expected_periodogram, expected_freqs, expected_mask_estimated_freqs = (
         np.array(x),
         np.array(expected_periodogram),
         np.array(expected_freqs),
+        np.array(expected_mask_estimated_freqs),
     )
-    periodogram, freqs = _periodogram(x)
+    periodogram, freqs, mask_estimated_freqs = _periodogram(x, n_max_freqs, B)
     assert np.allclose(periodogram, expected_periodogram)
     assert np.allclose(freqs, expected_freqs)
+    assert np.allclose(mask_estimated_freqs, expected_mask_estimated_freqs)
 
 
 @pytest.mark.parametrize(
@@ -141,11 +183,11 @@ def test__periodogram(x, expected_periodogram, expected_freqs):
             [[1], [2], [3], [4], [5]],
             1,
             [
+                [[1.38196601 + 0.0j]],
+                [[3.61803399 + 0.0j]],
                 [[45.0 + 0.0j]],
                 [[3.61803399 + 0.0j]],
                 [[1.38196601 + 0.0j]],
-                [[1.38196601 + 0.0j]],
-                [[3.61803399 + 0.0j]],
             ],
         ),
     ],
