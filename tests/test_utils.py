@@ -1,5 +1,6 @@
 import numpy as np
 import pytest
+
 from spectral_coherence.utils import is_sane_time_series
 
 

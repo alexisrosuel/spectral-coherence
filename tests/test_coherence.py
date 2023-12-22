@@ -1,5 +1,6 @@
 import numpy as np
 import pytest
+
 from spectral_coherence.coherence import _normalize, coherence
 
 

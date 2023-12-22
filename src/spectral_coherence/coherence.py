@@ -2,7 +2,7 @@ from typing import Optional
 
 import numpy as np
 
-from spectral_coherence.density import density
+from spectral_coherence.density import smoothed_periodogram
 
 
 def _normalize(S: np.ndarray) -> np.ndarray:
@@ -55,6 +55,6 @@ def coherence(
         Frequencies at which the coherence is estimated
     """
 
-    S_hats, freqs = density(x, B, n_max_freqs)
+    S_hats, freqs = smoothed_periodogram(x, B, n_max_freqs)
     C_hats = _normalize(S_hats)
     return C_hats, freqs

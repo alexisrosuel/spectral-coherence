@@ -1,12 +1,9 @@
 import numpy as np
 import pytest
-from spectral_coherence.density import (
-    _is_B_valid,
-    _periodogram,
-    _select_indices,
-    _smooth,
-    density,
-)
+
+from spectral_coherence.density import (_compute_autocors, _is_B_valid,
+                                        _periodogram, _select_indices, _smooth,
+                                        lag_window, smoothed_periodogram)
 
 
 @pytest.mark.parametrize(
@@ -192,7 +189,51 @@ def test__periodogram(
         ),
     ],
 )
-def test_density(x, B, expected_density):
+def test_smoothed_periodogram(x, B, expected_density):
     x, expected_density = np.array(x), np.array(expected_density)
-    estimated_density, _ = density(x, B)  # test only the density, not the freqs
+    estimated_density, _ = smoothed_periodogram(
+        x, B
+    )  # test only the density, not the freqs
     assert np.allclose(estimated_density, expected_density)
+
+
+@pytest.mark.parametrize(
+    "x, L, expected_autocors",
+    [
+        (
+            [[1], [2], [3], [4], [5]],
+            2,
+            [[8.66666667], [10.0], [11.0], [10.0], [8.66666667]],
+        ),
+        (
+            [[1, 2], [2, 3], [3, 4]],
+            1,
+            [[4.0, 9.0], [4.66666667, 9.66666667], [4.0, 9.0]],
+        ),
+    ],
+)
+def test__compute_autocors(x, L, expected_autocors):
+    x, expected_autocors = np.array(x), np.array(expected_autocors)
+    autocors = _compute_autocors(x, L)
+    assert np.allclose(autocors, expected_autocors)
+
+
+@pytest.mark.parametrize(
+    "X, L, expected_lag_window",
+    [
+        (
+            [[1], [2], [3], [4], [5]],
+            2,
+            [48.33333333],
+        ),
+        (
+            [[1, 2], [2, 3], [3, 4]],
+            1,
+            [[12.66666667 + 0.0j, 27.66666667 + 0.0j]],
+        ),
+    ],
+)
+def test_lag_window(X, L, expected_lag_window):
+    X, expected_lag_window = np.array(X), np.array(expected_lag_window)
+    lag_window_estimator = lag_window(X, L)
+    assert np.allclose(lag_window_estimator(0), expected_lag_window)

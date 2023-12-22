@@ -45,6 +45,21 @@ def _smooth(x: np.ndarray, B: int = 1) -> np.ndarray:
 
 
 def _select_indices(n: int, target_count=50) -> np.ndarray:
+    """
+    Select a subset of indices among n indices, in a uniform way.
+
+    Parameters
+    ----------
+    n : int
+        Number of indices to select from
+    target_count : int, optional
+        Number of indices to select, by default 50
+
+    Returns
+    -------
+    indices : np.ndarray
+        Indices to select
+    """
     if n <= target_count:
         return np.arange(n)  # if we have less than target_count values, return them all
 
@@ -144,7 +159,7 @@ def _is_B_valid(B: int, n_samples: int) -> bool:
     return B > 0 and B < n_samples and B % 2 == 1
 
 
-def density(
+def smoothed_periodogram(
     x: np.ndarray, B: int = 1, n_max_freqs: Optional[int] = None
 ) -> tuple[np.ndarray, np.ndarray]:
     """
@@ -174,8 +189,6 @@ def density(
     msg = f"{B=} must be positive, smaller than the number of samples, and odd"
     assert _is_B_valid(B, x.shape[0]), msg
 
-    # use scipy.signal.periodogram to compute the periodogram. Force the window to use
-    # all the samples, and use the default scaling (density)
     prdg, freqs, mask_estimated_freqs = _periodogram(
         x, n_max_freqs, B if n_max_freqs is not None else None
     )
@@ -184,3 +197,53 @@ def density(
     # return only the frequencies that are allowed to be estimated (ie. those for which we kept the B fft values
     # around them)
     return smoothed_prdg[mask_estimated_freqs], freqs[mask_estimated_freqs]
+
+
+def _compute_autocors(x: np.ndarray, L: int) -> np.ndarray:
+    """
+    Compute the autocorrelation of a time series x up to lag L
+
+    Parameters
+    ----------
+    x : np.ndarray
+        Time series of shape (n_samples, n_features)
+    L : int
+        Maximum lag
+
+    Returns
+    -------
+    autocors : np.ndarray
+        Autocorrelation of shape (2L+1, n_features)
+    """
+    n_samples, n_features = x.shape
+
+    # compute the autocorrelation of the time series
+    r_l_positive_hats = np.array(
+        [np.mean(x[l:, :] * np.conj(x[:-l, :]), axis=0) for l in range(1, L + 1)]
+    )  # shape is L x n_features
+    r_l_negative_hats = np.conj(r_l_positive_hats[::-1, :])
+    r_l_0_hats = np.mean(np.abs(x) ** 2, axis=0)
+    r_l_hats = np.concatenate(
+        [r_l_negative_hats, [r_l_0_hats], r_l_positive_hats]
+    )  # shape is (2L+1) x n_features
+
+    return r_l_hats
+
+
+def lag_window(X: np.ndarray, L: int) -> callable:
+    """
+    Compute the lag window estimator of the spectral density of a time series X.
+    """
+    n_samples, n_features = X.shape
+
+    # compute the autocorrelation of the time series
+    r_l_hats = _compute_autocors(X, L)  # shape is (2L+1) x n_features
+
+    # compute the exponential term
+    L_range = np.arange(-L, L + 1)
+    exp_sequence = lambda nu: np.exp(-2 * 1j * np.pi * L_range * nu)  # shape is 2L+1
+    exp_term = lambda nu: np.tile(
+        exp_sequence(nu), (n_features, 1)
+    ).T  # shape is (2L+1) x n_features
+
+    return lambda nu: np.sum(r_l_hats * exp_term(nu), axis=0)
