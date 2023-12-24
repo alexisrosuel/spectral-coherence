@@ -1,7 +1,8 @@
 import numpy as np
 import pytest
 
-from spectral_coherence.density import (_compute_autocors, _is_B_valid,
+from spectral_coherence.density import (_compute_autocors,
+                                        _get_B_spaced_freqs_mask, _is_B_valid,
                                         _periodogram, _select_indices, _smooth,
                                         lag_window, smoothed_periodogram)
 
@@ -237,3 +238,16 @@ def test_lag_window(X, L, expected_lag_window):
     X, expected_lag_window = np.array(X), np.array(expected_lag_window)
     lag_window_estimator = lag_window(X, L)
     assert np.allclose(lag_window_estimator(0), expected_lag_window)
+
+
+@pytest.mark.parametrize(
+    "n_samples, B, expected_mask",
+    [
+        (5, 3, [True, False, False, True, False]),
+        (5, 1, [True, True, True, True, True]),
+        (5, 5, [True, False, False, False, False]),
+    ],
+)
+def test__get_B_spaced_freqs_mask(n_samples, B, expected_mask):
+    mask = _get_B_spaced_freqs_mask(n_samples, B)
+    assert np.allclose(mask, expected_mask)

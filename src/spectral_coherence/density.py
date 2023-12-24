@@ -68,6 +68,30 @@ def _select_indices(n: int, target_count=50) -> np.ndarray:
     return indices
 
 
+def _get_B_spaced_freqs_mask(n_samples: int, B: int) -> np.ndarray:
+    """
+    Returns a mask of the frequencies that can be estimated. If n_max_freqs is None, all frequencies can estimated.
+    Otherwise, only n_max_freqs frequencies have the sufficient amount of fft values around them to be estimated.
+
+    Parameters
+    ----------
+    n_samples : int
+        Number of samples in the signal
+    B : int
+        Smoothing parameter
+
+    Returns
+    -------
+    mask_estimated_freqs: np.ndarray
+        Mask of the frequencies that can be estimated. If n_max_freqs is None, all frequencies can estimated.
+        Otherwise, only n_max_freqs frequencies have the sufficient amount of fft values around them to be estimated.
+    """
+    mask_estimated_freqs = np.zeros(n_samples, dtype=bool)
+    mask_estimated_freqs[::B] = True
+
+    return mask_estimated_freqs
+
+
 def _periodogram(
     x: np.ndarray, n_max_freqs: Optional[int] = None, B: Optional[int] = None
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
@@ -113,8 +137,7 @@ def _periodogram(
     freqs = freqs[idx]
     fft = fft[idx, :]
 
-    # todo: select only a subset of the frequencies. We only want maximum 10 estimations of the spectral density
-    # don't forget to also include the B fft around each frequency that we want to compute the periodogram at
+    # select the frequencies at which we want to compute the periodogram
     if n_max_freqs is not None:
         indices = _select_indices(n_samples, n_max_freqs)
         estimated_freqs = freqs[
