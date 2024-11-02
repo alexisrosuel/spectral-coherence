@@ -1,10 +1,16 @@
 import numpy as np
 import pytest
 
-from spectral_coherence.density import (_compute_autocors,
-                                        _get_B_spaced_freqs_mask, _is_B_valid,
-                                        _periodogram, _select_indices, _smooth,
-                                        lag_window, smoothed_periodogram)
+from spectral_coherence.density import (
+    _compute_autocors,
+    _get_B_spaced_freqs_mask,
+    _is_B_valid,
+    _periodogram,
+    _select_indices,
+    _smooth,
+    lag_window,
+    smoothed_periodogram,
+)
 
 
 @pytest.mark.parametrize(

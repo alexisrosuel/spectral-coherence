@@ -1,2 +1,5 @@
-from spectral_coherence.coherence import coherence
-from spectral_coherence.density import lag_window, smoothed_periodogram
+from spectral_coherence.coherence import coherences, half_coherences
+from spectral_coherence.density import (
+    half_smoothed_periodograms,
+    smoothed_periodograms,
+)
